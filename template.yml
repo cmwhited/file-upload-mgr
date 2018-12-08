@@ -10,17 +10,7 @@ Parameters:
   Stage:
     Type: String
     Description: The name for a project pipeline stage, such as Staging or Prod, for which resources are provisioned and deployed.
-    Default: ''
-
-# Enable blue/green deployments using this Globals section. For instructions, see the AWS CodeStar User Guide:
-# https://docs.aws.amazon.com/codestar/latest/userguide/how-to-modify-serverless-project.html?icmpid=docs_acs_rm_tr
-#
-# Globals:
-#   Function:
-#     AutoPublishAlias: live
-#     DeploymentPreference:
-#       Enabled: true
-#       Type: Canary10Percent5Minutes
+    Default: 'Dev'
 
 Resources:
   GetHelloWorld:
@@ -52,4 +42,16 @@ Resources:
       Path: /
       ManagedPolicyArns:
         -  arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        -  arn:aws:iam::260345904678:policy/DynamoDbAccessPolicy
       PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/CodeStar_${ProjectId}_PermissionsBoundary'
+  UsersTable:
+    Description: DynamoDB SimpleTable for storing Users
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: users
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 1
+      PrimaryKey:
+        Name: id
+        Type: String
