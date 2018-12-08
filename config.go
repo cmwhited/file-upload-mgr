@@ -101,7 +101,7 @@ func (c *conf) loggerImpl() *LOGGER.Logger {
 //	* mutations
 func (c *conf) initSchema() error {
 	rootQuery := graphql.NewObject(graphql.ObjectConfig{
-		Name:        "HelloWorld",
+		Name:        "RootQuery",
 		Description: "Testing GraphQL impl",
 		Fields: graphql.Fields{
 			"hello": &graphql.Field{
