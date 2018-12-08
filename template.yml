@@ -13,20 +13,28 @@ Parameters:
     Default: 'Dev'
 
 Resources:
-  GetHelloWorld:
+  FileUploadMgrHandler:
     Type: AWS::Serverless::Function
     Properties:
       Handler: main
       Runtime: go1.x
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: users
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
         - Arn
       Events:
-        GetEvent:
+        PostGraphQlEvent:
           Type: Api
           Properties:
-            Path: /
+            Path: /graphql
+            Method: post
+        GetGraphQlEvent:
+          Type: Api
+          Properties:
+            Path: /graphql
             Method: get
   LambdaExecutionRole:
     Description: Creating service role in IAM for AWS Lambda
@@ -55,3 +63,21 @@ Resources:
       PrimaryKey:
         Name: id
         Type: String
+  SessionsTable:
+    Description: DynamoDB Table for storing file sessions for the uploads
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: sessions
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+      AttributeDefinitions:
+        - AttributeName: 'id'
+          AttributeType: 'S'
+        - AttributeName: 'user_id'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: "id"
+          KeyType: "HASH"
+        - AttributeName: "user_id"
+          KeyType: "RANGE"
