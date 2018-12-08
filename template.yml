@@ -3,11 +3,6 @@ Transform:
 - AWS::Serverless-2016-10-31
 - AWS::CodeStar
 
-Globals:
-  Api:
-    EndpointConfiguration: REGIONAL
-    Cors: "'*'"
-
 Parameters:
   ProjectId:
     Type: String
