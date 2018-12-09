@@ -37,21 +37,6 @@ Resources:
           Properties:
             Path: /graphql
             Method: get
-  LambdaExecutionRole:
-    Description: Creating service role in IAM for AWS Lambda
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub 'CodeStar-${ProjectId}-Execution${Stage}'
-      AssumeRolePolicyDocument:
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service: [lambda.amazonaws.com]
-          Action: sts:AssumeRole
-      Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/CodeStar_${ProjectId}_PermissionsBoundary'
   UsersTable:
     Description: DynamoDB Table for storing user records
     Type: AWS::DynamoDB::Table
