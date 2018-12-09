@@ -12,7 +12,7 @@ import (
 )
 
 // findUserById query the users tables to find a user record by the id
-func findUserBydId(id, usersTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) (*user, error) {
+func findUserBydID(id, usersTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) (*user, error) {
 	logger.WithFields(LOGGER.Fields{
 		"id":               id,
 		"users_table_name": usersTableName,

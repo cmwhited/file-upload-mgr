@@ -126,7 +126,7 @@ func (c *conf) buildRootQuery() *graphql.Object {
 				},
 				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
 					id := p.Args["id"].(string)
-					return findUserBydId(id, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
+					return findUserBydID(id, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
 				},
 			},
 			"getUserByEmail": &graphql.Field{
