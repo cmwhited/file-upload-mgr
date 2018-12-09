@@ -141,14 +141,8 @@ func (c *conf) buildRootMutation() *graphql.Object {
 					pwd := p.Args["pwd"].(string)
 					name := p.Args["name"].(string)
 					role := p.Args["role"].(string)
-					// log request
-					c.loggerImpl().WithFields(LOGGER.Fields{
-						"email": email,
-						"name":  name,
-						"role":  role,
-					}).Info("mutation.register() - attempting to register a new user")
 					// attempt to register user
-					return registerUser(email, pwd, name, role, c.tableNames()[tablesMapUserKey], c.dynamoImpl())
+					return registerUser(email, pwd, name, role, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
 				},
 			},
 			"authenticate": &graphql.Field{

@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbiface"
 	"github.com/satori/go.uuid"
+	LOGGER "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,7 +38,13 @@ func verifyPwd(hashedPwd, pwd string) bool {
 }
 
 // RegisterUser register a new user instance using the dynamo service
-func registerUser(email, pwd, name, role, usersTableName string, dbAPI dynamodbiface.DynamoDBAPI) (*user, error) {
+func registerUser(email, pwd, name, role, usersTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) (*user, error) {
+	logger.WithFields(LOGGER.Fields{
+		"email":            email,
+		"name":             name,
+		"role":             role,
+		"users_table_name": usersTableName,
+	}).Info("registerUser() - attempting to register a new user")
 	hashed, err := hashPwd(pwd)
 	if err != nil {
 		return nil, err
@@ -68,6 +75,9 @@ func registerUser(email, pwd, name, role, usersTableName string, dbAPI dynamodbi
 		Item:      userMap,
 		TableName: aws.String(usersTableName),
 	}).Send(); err != nil {
+		logger.WithFields(LOGGER.Fields{
+			"put_item_error": err.Error(),
+		}).Error("registerUser() - an error occurred calling the PutItemRequest to store the user")
 		return nil, err
 	}
 	return user, nil
