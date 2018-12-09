@@ -46,15 +46,11 @@ Resources:
         ReadCapacityUnits: 2
         WriteCapacityUnits: 2
       AttributeDefinitions:
-        - AttributeName: 'id'
-          AttributeType: 'S'
         - AttributeName: 'email'
           AttributeType: 'S'
       KeySchema:
-        - AttributeName: "id"
-          KeyType: "HASH"
         - AttributeName: "email"
-          KeyType: "RANGE"
+          KeyType: "HASH"
   SessionsTable:
     Description: DynamoDB Table for storing file sessions for the uploads
     Type: AWS::DynamoDB::Table

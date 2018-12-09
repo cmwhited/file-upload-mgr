@@ -47,7 +47,6 @@ type baseMeta struct {
 }
 
 type user struct {
-	ID    string   `json:"id"`
 	Email string   `json:"email"`
 	Pwd   string   `json:"pwd"`
 	Name  string   `json:"name"`
@@ -74,7 +73,6 @@ var (
 		Name:        "User",
 		Description: "Describes fields for a User record",
 		Fields: graphql.Fields{
-			"id":    &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
 			"email": &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
 			"name":  &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
 			"role":  &graphql.Field{Type: graphql.NewNonNull(graphql.String)},

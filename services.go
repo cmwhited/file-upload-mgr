@@ -7,34 +7,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbiface"
-	"github.com/satori/go.uuid"
 	LOGGER "github.com/sirupsen/logrus"
 )
-
-// findUserById query the users tables to find a user record by the id
-func findUserBydID(id, usersTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) (*user, error) {
-	logger.WithFields(LOGGER.Fields{
-		"id":               id,
-		"users_table_name": usersTableName,
-	}).Info("findUserBydId() - attempting to find a user record by the id")
-	output, err := dbAPI.GetItemRequest(&dynamodb.GetItemInput{
-		TableName: aws.String(usersTableName),
-		Key: map[string]dynamodb.AttributeValue{
-			"id": {
-				S: aws.String(id),
-			},
-		},
-	}).Send()
-	if err != nil || len(output.Item) == 0 {
-		return nil, err
-	}
-	// unmarshal return into user
-	var user = new(user)
-	if err = dynamodbattribute.UnmarshalMap(output.Item, &user); err != nil {
-		return nil, err
-	}
-	return user, nil
-}
 
 // findUserBydEmail query the users tables to find a user record by the id
 func findUserBydEmail(email, usersTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) (*user, error) {
@@ -73,13 +47,8 @@ func registerUser(email, pwd, name, role, usersTableName string, dbAPI dynamodbi
 	if err != nil {
 		return nil, err
 	}
-	id, err := uuid.NewV4()
-	if err != nil {
-		return nil, err
-	}
 	// build user instance
 	user := &user{
-		ID:    id.String(),
 		Email: email,
 		Name:  name,
 		Role:  role,
@@ -107,7 +76,7 @@ func registerUser(email, pwd, name, role, usersTableName string, dbAPI dynamodbi
 	return user, nil
 }
 
-// Authenticate a user
+// authenticate a user
 //	* attempt to find the user with the given email
 //		* if not found, return a non-successful authentication
 //	* otherwise, validate that the submitted password matches the password on file
@@ -128,7 +97,7 @@ func authenticate(email, pwd, usersTableName, jwtSecret string, tokenExpiryMin i
 		}
 	}
 	// build the auth token
-	token, expiry, err := buildToken(jwtSecret, user.ID, tokenExpiryMin)
+	token, expiry, err := buildToken(jwtSecret, user.Email, tokenExpiryMin)
 	if err != nil {
 		return auth{
 			Success: false,

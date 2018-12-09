@@ -118,17 +118,6 @@ func (c *conf) buildRootQuery() *graphql.Object {
 					return "World", nil
 				},
 			},
-			"getUserById": &graphql.Field{
-				Type:        userType,
-				Description: "find a user record by its id",
-				Args: graphql.FieldConfigArgument{
-					"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
-				},
-				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
-					id := p.Args["id"].(string)
-					return findUserBydID(id, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
-				},
-			},
 			"getUserByEmail": &graphql.Field{
 				Type:        userType,
 				Description: "find a user record by its email",
