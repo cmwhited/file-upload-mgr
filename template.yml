@@ -23,12 +23,13 @@ Resources:
         Variables:
           JWT_SECRET: kqivVVuYGZRxsI8S14en
           TOKEN_EXPIRY_MIN: 60
-          USERS_TABLE_NAME: users
-          SESSIONS_TABLE_NAME: sessions
+          USERS_TABLE_NAME: !Ref UsersTable
+          SESSIONS_TABLE_NAME: !Ref SessionsTable
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
         - Arn
+      Policies: AmazonDynamoDBFullAccess
       Events:
         PostGraphQlEvent:
           Type: Api
@@ -54,24 +55,30 @@ Resources:
       Path: /
       ManagedPolicyArns:
         -  arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        -  arn:aws:iam::260345904678:policy/DynamoDbAccessPolicy
       PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/CodeStar_${ProjectId}_PermissionsBoundary'
   UsersTable:
-    Description: DynamoDB SimpleTable for storing Users
-    Type: AWS::Serverless::SimpleTable
+    Description: DynamoDB Table for storing user records
+    Type: AWS::DynamoDB::Table
     Properties:
-      TableName: users
+      TableName: !Sub '${Stage}_users'
       ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 1
-      PrimaryKey:
-        Name: id
-        Type: String
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+      AttributeDefinitions:
+        - AttributeName: 'id'
+          AttributeType: 'S'
+        - AttributeName: 'email'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: "id"
+          KeyType: "HASH"
+        - AttributeName: "email"
+          KeyType: "RANGE"
   SessionsTable:
     Description: DynamoDB Table for storing file sessions for the uploads
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: sessions
+      TableName: !Sub '${Stage}_sessions'
       ProvisionedThroughput:
         ReadCapacityUnits: 2
         WriteCapacityUnits: 2
