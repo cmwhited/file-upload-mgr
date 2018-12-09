@@ -99,7 +99,7 @@ func (c *conf) initLoggerConfig() {
 	})
 	log.SetOutput(os.Stdout)
 	log.SetReportCaller(true)
-	log.SetLevel(LOGGER.InfoLevel)
+	log.SetLevel(LOGGER.DebugLevel)
 	c.log = log
 }
 

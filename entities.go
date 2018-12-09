@@ -1,10 +1,44 @@
 package main
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/graphql-go/graphql"
 )
+
+type apiResponseBuilder interface {
+	WithReceivedAt(receivedAt time.Time) apiResponseBuilder
+	WithErrors(errors interface{}) apiResponseBuilder
+	WithMessage(msg string) apiResponseBuilder
+	ToJSON() string
+}
+
+type apiResponse struct {
+	ReceivedAt time.Time   `json:"received_at"`
+	Errors     interface{} `json:"errors"`
+	Message    string      `json:"message"`
+}
+
+func (api *apiResponse) WithReceivedAt(receivedAt time.Time) apiResponseBuilder {
+	api.ReceivedAt = receivedAt
+	return api
+}
+
+func (api *apiResponse) WithErrors(errors interface{}) apiResponseBuilder {
+	api.Errors = errors
+	return api
+}
+
+func (api *apiResponse) WithMessage(msg string) apiResponseBuilder {
+	api.Message = msg
+	return api
+}
+
+func (api *apiResponse) ToJSON() string {
+	r, _ := json.Marshal(api)
+	return string(r)
+}
 
 type baseMeta struct {
 	MetaCreatedAt time.Time `json:"meta__created_at"`

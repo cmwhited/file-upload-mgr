@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"time"
 
 	"github.com/graphql-go/graphql"
 
@@ -25,19 +25,27 @@ type params struct {
 //	- return the response of the query
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	if len(request.Body) == 0 {
-		fmt.Println("Handler() - The Request body is null. Cannot Process")
+		resp := new(apiResponse).
+			WithReceivedAt(time.Now()).
+			WithErrors("Request body is null").
+			WithMessage("Handler() - The Request body is null. Cannot Process").
+			ToJSON()
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
-			Body:       "Handler() - The Request body is null. Cannot Process",
+			Body:       resp,
 		}, nil
 	}
 	// initialize file upload manager config
 	mgr, err := new(conf).init()
 	if err != nil {
-		fmt.Printf("Handler() - error occurred trying to initialize :: %s\r\n", err.Error())
+		resp := new(apiResponse).
+			WithReceivedAt(time.Now()).
+			WithErrors(err.Error()).
+			WithMessage("Handler() - error occurred trying to initialize").
+			ToJSON()
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
-			Body:       err.Error(),
+			Body:       resp,
 		}, nil
 	}
 	// log event
@@ -50,7 +58,16 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	if err := json.Unmarshal([]byte(request.Body), &reqParams); err != nil {
 		mgr.loggerImpl().WithFields(LOGGER.Fields{
 			"deserialization_error": err.Error(),
-		}).Info("Handler() - An error occurred while trying to deserialize the request body into the params")
+		}).Error("Handler() - An error occurred while trying to deserialize the request body into the params")
+		resp := new(apiResponse).
+			WithReceivedAt(time.Now()).
+			WithErrors(err.Error()).
+			WithMessage("Handler() - An error occurred while trying to deserialize the request body into the params").
+			ToJSON()
+		return events.APIGatewayProxyResponse{
+			StatusCode: 500,
+			Body:       resp,
+		}, nil
 	}
 	// run query against graphql instance to get result
 	schema := mgr.schemaImpl()
@@ -69,9 +86,14 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			"request_variables":      reqParams.Variables,
 			"request_errors":         response.Errors,
 		}).Error("Handler() - an error occurred trying to perform the graphql query operation")
+		resp := new(apiResponse).
+			WithReceivedAt(time.Now()).
+			WithErrors(response.Errors).
+			WithMessage("Handler() - an error occurred trying to perform the graphql query operation").
+			ToJSON()
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
-			Body:       "Handler() - An error occurred while trying to run the query. Please try again",
+			Body:       resp,
 		}, nil
 	}
 	// parse response; serialize into JSON
@@ -83,9 +105,14 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			"request_variables":      reqParams.Variables,
 			"request_errors":         err.Error(),
 		}).Error("Handler() - an error occurred trying to marshal the graphql query response into json")
+		resp := new(apiResponse).
+			WithReceivedAt(time.Now()).
+			WithErrors(err.Error()).
+			WithMessage("Handler() - an error occurred trying to marshal the graphql query response into json").
+			ToJSON()
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
-			Body:       "Handler() - An error occurred while trying to serialize the query response",
+			Body:       resp,
 		}, nil
 	}
 	return events.APIGatewayProxyResponse{
