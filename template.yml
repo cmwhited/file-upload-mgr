@@ -25,12 +25,7 @@ Resources:
           TOKEN_EXPIRY_MIN: 60
           USERS_TABLE_NAME: !Ref UsersTable
           SESSIONS_TABLE_NAME: !Ref SessionsTable
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UsersTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref SessionsTable
+      Role: arn:aws:iam::260345904678:role/DynamoDbBasedLambdaRole
       Events:
         PostGraphQlEvent:
           Type: Api
