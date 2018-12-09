@@ -29,7 +29,6 @@ Resources:
         Fn::GetAtt:
         - LambdaExecutionRole
         - Arn
-      Policies: AmazonDynamoDBFullAccess
       Events:
         PostGraphQlEvent:
           Type: Api
@@ -54,8 +53,8 @@ Resources:
           Action: sts:AssumeRole
       Path: /
       ManagedPolicyArns:
-        -  arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/CodeStar_${ProjectId}_PermissionsBoundary'
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
   UsersTable:
     Description: DynamoDB Table for storing user records
     Type: AWS::DynamoDB::Table
