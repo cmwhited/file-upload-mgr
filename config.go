@@ -23,6 +23,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
@@ -34,7 +35,13 @@ import (
 	LOGGER "github.com/sirupsen/logrus"
 )
 
-const dataKey = "data"
+const (
+	dataKey           = "data"
+	jwtSecretKey      = "JWT_SECRET"
+	tokenExpiryMinKey = "TOKEN_EXPIRY_MIN"
+	tablesMapUserKey  = "USERS"
+	usersTableNameKey = "USERS_TABLE_NAME"
+)
 
 type config interface {
 	initAwsConfig() error
@@ -45,13 +52,17 @@ type config interface {
 	initSchema() error
 	schemaImpl() *graphql.Schema
 	init() (config, error)
+	tableNames() map[string]string
 }
 
 type conf struct {
-	dynamo dynamodbiface.DynamoDBAPI
-	s3     s3iface.S3API
-	log    *LOGGER.Logger
-	schema *graphql.Schema
+	dynamo         dynamodbiface.DynamoDBAPI
+	s3             s3iface.S3API
+	log            *LOGGER.Logger
+	schema         *graphql.Schema
+	tableName      map[string]string
+	jwtSecret      string
+	tokenExpiryMin int
 }
 
 // initAwsConfig() - initialize the required AWS services
@@ -96,13 +107,10 @@ func (c *conf) loggerImpl() *LOGGER.Logger {
 	return c.log
 }
 
-// schemaImpl() - init a graphql schema instance with the given:
-//	* queries
-//	* mutations
-func (c *conf) initSchema() error {
-	rootQuery := graphql.NewObject(graphql.ObjectConfig{
+func (c *conf) buildRootQuery() *graphql.Object {
+	return graphql.NewObject(graphql.ObjectConfig{
 		Name:        "RootQuery",
-		Description: "Testing GraphQL impl",
+		Description: "Hello World impl for testing purposes",
 		Fields: graphql.Fields{
 			"hello": &graphql.Field{
 				Type: graphql.NewNonNull(graphql.String),
@@ -112,8 +120,57 @@ func (c *conf) initSchema() error {
 			},
 		},
 	})
+}
+
+func (c *conf) buildRootMutation() *graphql.Object {
+	return graphql.NewObject(graphql.ObjectConfig{
+		Name: "RootMutation",
+		Fields: graphql.Fields{
+			"register": &graphql.Field{
+				Type:        graphql.NewNonNull(userType),
+				Description: "Register a new user instance",
+				Args: graphql.FieldConfigArgument{
+					"email": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+					"pwd":   &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+					"name":  &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+					"role":  &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+				},
+				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
+					// get input args
+					email := p.Args["email"].(string)
+					pwd := p.Args["pwd"].(string)
+					name := p.Args["name"].(string)
+					role := p.Args["role"].(string)
+					// attempt to register user
+					return registerUser(email, pwd, name, role, c.tableNames()[tablesMapUserKey], c.dynamoImpl())
+				},
+			},
+			"authenticate": &graphql.Field{
+				Type:        graphql.NewNonNull(authType),
+				Description: "Attempt to authenticate a user with their email and password",
+				Args: graphql.FieldConfigArgument{
+					"email": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+					"pwd":   &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+				},
+				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
+					// get input args
+					email := p.Args["email"].(string)
+					pwd := p.Args["pwd"].(string)
+					// attempt to authenticate user
+					return authenticate(email, pwd, c.tableNames()[tablesMapUserKey], c.jwtSecret, c.tokenExpiryMin, c.dynamoImpl()), nil
+				},
+			},
+		},
+	})
+}
+
+// schemaImpl() - init a graphql schema instance with the given:
+//	* queries
+//	* mutations
+func (c *conf) initSchema() error {
 	schemaConfig := graphql.SchemaConfig{
-		Query: rootQuery,
+		Query:    c.buildRootQuery(),
+		Mutation: c.buildRootMutation(),
 	}
 	schema, err := graphql.NewSchema(schemaConfig)
 	if err != nil {
@@ -127,8 +184,21 @@ func (c *conf) schemaImpl() *graphql.Schema {
 	return c.schema
 }
 
+func (c *conf) tableNames() map[string]string {
+	return c.tableName
+}
+
 // init() - initialize all configurations
 func (c *conf) init() (config, error) {
+	// load table names from env variables
+	usersTableName := os.Getenv(usersTableNameKey)
+	c.tableName = map[string]string{
+		tablesMapUserKey: usersTableName,
+	}
+	c.jwtSecret = os.Getenv(jwtSecretKey)          // get the jwt secret key from the env
+	tokenExpiryVal := os.Getenv(tokenExpiryMinKey) // get the jwt expiry value from the env
+	tokenExpiry, _ := strconv.Atoi(tokenExpiryVal) // convert to int
+	c.tokenExpiryMin = tokenExpiry
 	c.initLoggerConfig() // initialize logger instance
 	// initialize aws config
 	if err := c.initAwsConfig(); err != nil {

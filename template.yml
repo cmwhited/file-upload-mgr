@@ -21,7 +21,10 @@ Resources:
       Timeout: 10
       Environment:
         Variables:
+          JWT_SECRET: kqivVVuYGZRxsI8S14en
+          TOKEN_EXPIRY_MIN: 60
           USERS_TABLE_NAME: users
+          SESSIONS_TABLE_NAME: sessions
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
