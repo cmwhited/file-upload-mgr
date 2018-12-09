@@ -75,7 +75,7 @@ func (c *conf) initAwsConfig() error {
 	if err != nil {
 		return err
 	}
-	cfg.Region = endpoints.UsEast1RegionID
+	cfg.Region = endpoints.UsWest2RegionID
 	// instantiate service impl
 	c.dynamo = dynamodb.New(cfg)
 	c.s3 = s3.New(cfg)
