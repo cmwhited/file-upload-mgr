@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -25,6 +26,11 @@ func findUserByEmail(email, usersTableName string, dbAPI dynamodbiface.DynamoDBA
 		},
 	}).Send()
 	if err != nil || len(output.Item) == 0 {
+		logger.WithFields(LOGGER.Fields{
+			"email":            email,
+			"users_table_name": usersTableName,
+			"error":            err.Error(),
+		}).Error("findUserByEmail() - an error occurred while trying to find the user record by email")
 		return nil, err
 	}
 	// unmarshal return into user
@@ -81,7 +87,7 @@ func registerUser(email, pwd, name, role, usersTableName string, dbAPI dynamodbi
 //		* if not found, return a non-successful authentication
 //	* otherwise, validate that the submitted password matches the password on file
 //		* if the passwords do not match, return a non-successful authentication
-func authenticate(email, pwd, usersTableName, jwtSecret string, tokenExpiryMin int, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) auth {
+func authenticate(email, pwd, usersTableName string, jwtSecret []byte, tokenExpiryMin int, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) auth {
 	user, err := findUserByEmail(email, usersTableName, dbAPI, logger)
 	if err != nil {
 		return auth{
@@ -89,6 +95,7 @@ func authenticate(email, pwd, usersTableName, jwtSecret string, tokenExpiryMin i
 			Message: "Unable to find a record with the given email. Please Verify your email and try again",
 		}
 	}
+	fmt.Println("Found a user. verify pwd")
 	// verify password match
 	if !verifyPwd(user.Pwd, pwd) {
 		return auth{
@@ -97,7 +104,7 @@ func authenticate(email, pwd, usersTableName, jwtSecret string, tokenExpiryMin i
 		}
 	}
 	// build the auth token
-	token, expiry, err := buildToken(jwtSecret, user.Email, tokenExpiryMin)
+	token, expiry, err := buildToken(user.Email, jwtSecret, tokenExpiryMin)
 	if err != nil {
 		return auth{
 			Success: false,

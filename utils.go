@@ -32,7 +32,7 @@ func verifyPwd(hashedPwd, pwd string) bool {
 
 // buildToken build and sign a JWT for the authenticated user.
 //	* return the signed token with claims as well as the tokens expiration value
-func buildToken(jwtSecret, email string, tokenExpiryMin int) (*string, *int64, error) {
+func buildToken(email string, jwtSecret []byte, tokenExpiryMin int) (*string, *int64, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": email,
 	})

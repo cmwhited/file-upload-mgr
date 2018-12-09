@@ -61,7 +61,7 @@ type conf struct {
 	log            *LOGGER.Logger
 	schema         *graphql.Schema
 	tableName      map[string]string
-	jwtSecret      string
+	jwtSecret      []byte
 	tokenExpiryMin int
 }
 
@@ -206,7 +206,8 @@ func (c *conf) init() (config, error) {
 	c.tableName = map[string]string{
 		tablesMapUserKey: usersTableName,
 	}
-	c.jwtSecret = os.Getenv(jwtSecretKey)          // get the jwt secret key from the env
+	jwtSecret := os.Getenv(jwtSecretKey)           // get the jwt secret key from the env
+	c.jwtSecret = []byte(jwtSecret)                // set as byte array; required by signer
 	tokenExpiryVal := os.Getenv(tokenExpiryMinKey) // get the jwt expiry value from the env
 	tokenExpiry, _ := strconv.Atoi(tokenExpiryVal) // convert to int
 	c.tokenExpiryMin = tokenExpiry
