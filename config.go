@@ -129,6 +129,18 @@ func (c *conf) buildRootQuery() *graphql.Object {
 					return findUserByEmail(email, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
 				},
 			},
+			"getAuthUser": &graphql.Field{
+				Type:        userType,
+				Description: "Get the currently authenticated user by getting their info from the Auth header in the request",
+				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
+					// attempt to validate token
+					email, err := validateToken(p.Context.Value(authHeaderKey), c.jwtSecret)
+					if err != nil {
+						return nil, err
+					}
+					return findUserByEmail(*email, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
+				},
+			},
 		},
 	})
 }

@@ -1,11 +1,17 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const bearerTokenKey = "Bearer "
 
 // hashPwd hash the input password using the bcrypt lib
 func hashPwd(pwd string) (*string, error) {
@@ -44,4 +50,46 @@ func buildToken(email string, jwtSecret []byte, tokenExpiryMin int) (*string, *i
 	nowPlusExpiry := now.Add(time.Duration(tokenExpiryMin) * time.Minute) // add 60 minutes to current time to get token expiry
 	nowPlusExpiryTimestamp := nowPlusExpiry.UnixNano()                    // get the expiry timestamp
 	return &signedToken, &nowPlusExpiryTimestamp, nil
+}
+
+// validateToken - validate that the incoming Authorization header token is valid:
+//		- exists
+//		- non-expired
+//		- contains the authenticate user email
+//	If valid, return the authenticated users email
+func validateToken(authHeader interface{}, jwtSecret []byte) (*string, error) {
+	// validate an Authorization header token is present in the request
+	if authHeader == nil {
+		return nil, errors.New("no valid Authorization token in request")
+	}
+	header := authHeader.(string)
+	if header == "" {
+		return nil, errors.New("no valid Authorization token in request")
+	}
+	// validate that it is a Bearer token
+	if !strings.HasPrefix(header, bearerTokenKey) {
+		return nil, errors.New("authorization token is not valid Bearer token")
+	}
+	t := strings.Replace(header, bearerTokenKey, "", -1)
+	// parse the header token
+	token, err := jwt.Parse(t, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("there was an parsing the given token. please validate the token is for this service")
+		}
+		return jwtSecret, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	// validate token and get claims
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		var decodedToken map[string]string
+		err = mapstructure.Decode(claims, &decodedToken)
+		if err != nil {
+			return nil, err
+		}
+		email := decodedToken["email"]
+		return &email, nil
+	}
+	return nil, errors.New("invalid authorization token") // token is not valid, return error
 }

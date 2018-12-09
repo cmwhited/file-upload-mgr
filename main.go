@@ -12,6 +12,13 @@ import (
 	LOGGER "github.com/sirupsen/logrus"
 )
 
+type key string
+
+const (
+	authHeaderKey          key = "Authorization"
+	authorizationHeaderKey     = "Authorization"
+)
+
 type params struct {
 	Query         string                 `json:"query"`
 	OperationName string                 `json:"operationName"`
@@ -24,6 +31,8 @@ type params struct {
 //	- attempt to run the graphql query
 //	- return the response of the query
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	// add the Authorization header to the context which is passed to the query
+	appCtx := context.WithValue(ctx, authHeaderKey, request.Headers[authorizationHeaderKey])
 	if len(request.Body) == 0 {
 		resp := new(apiResponse).
 			WithReceivedAt(time.Now()).
@@ -76,7 +85,7 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		RequestString:  reqParams.Query,
 		VariableValues: reqParams.Variables,
 		OperationName:  reqParams.OperationName,
-		Context:        ctx,
+		Context:        appCtx,
 	})
 	// check for errors
 	if response.HasErrors() {
