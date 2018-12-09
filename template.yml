@@ -52,9 +52,31 @@ Resources:
             Service: [lambda.amazonaws.com]
           Action: sts:AssumeRole
       Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::260345904678:policy/DynamoDbAccessPolicy
+      Policies:
+        - PolicyName: !Sub 'CodeStar-${ProjectId}-Execution${Stage}-GeneralPolicy'
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "iam:DeleteRolePermissionsBoundary"
+                Resource: "*"
+        - PolicyName: !Sub 'CodeStar-${ProjectId}-Execution${Stage}-DynamoPolicy'
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "dynamodb:*"
+                Resource:
+                  - Fn::GetAtt:
+                      - UsersTable
+                      - Arn
+                  - Fn::GetAtt:
+                      - SessionsTable
+                      - Arn
       PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/CodeStar_${ProjectId}_PermissionsBoundary'
   UsersTable:
     Description: DynamoDB Table for storing user records
