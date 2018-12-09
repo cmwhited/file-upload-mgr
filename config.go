@@ -118,6 +118,28 @@ func (c *conf) buildRootQuery() *graphql.Object {
 					return "World", nil
 				},
 			},
+			"getUserById": &graphql.Field{
+				Type:        userType,
+				Description: "find a user record by its id",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+				},
+				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
+					id := p.Args["id"].(string)
+					return findUserBydId(id, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
+				},
+			},
+			"getUserByEmail": &graphql.Field{
+				Type:        userType,
+				Description: "find a user record by its email",
+				Args: graphql.FieldConfigArgument{
+					"email": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+				},
+				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
+					email := p.Args["email"].(string)
+					return findUserBydEmail(email, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
+				},
+			},
 		},
 	})
 }
@@ -161,7 +183,7 @@ func (c *conf) buildRootMutation() *graphql.Object {
 						"email": email,
 					}).Info("mutation.authenticate() - attempting to authenticate user")
 					// attempt to authenticate user
-					return authenticate(email, pwd, c.tableNames()[tablesMapUserKey], c.jwtSecret, c.tokenExpiryMin, c.dynamoImpl()), nil
+					return authenticate(email, pwd, c.tableNames()[tablesMapUserKey], c.jwtSecret, c.tokenExpiryMin, c.dynamoImpl(), c.loggerImpl()), nil
 				},
 			},
 		},
