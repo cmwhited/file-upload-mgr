@@ -52,32 +52,41 @@ Resources:
             Service: [lambda.amazonaws.com]
           Action: sts:AssumeRole
       Path: /
-      Policies:
-        - PolicyName: !Sub 'CodeStar-${ProjectId}-Execution${Stage}-GeneralPolicy'
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                  - "iam:DeleteRolePermissionsBoundary"
-                Resource: "*"
-        - PolicyName: !Sub 'CodeStar-${ProjectId}-Execution${Stage}-DynamoPolicy'
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action: "dynamodb:*"
-                Resource:
-                  - Fn::GetAtt:
-                      - UsersTable
-                      - Arn
-                  - Fn::GetAtt:
-                      - SessionsTable
-                      - Arn
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/CodeStar_${ProjectId}_PermissionsBoundary'
+  GeneralPolicy:
+    Description: General lambda invocation use policy
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub 'CodeStar-${ProjectId}-Execution-GeneralPolicy'
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "iam:DeleteRolePermissionsBoundary"
+            Resource: "*"
+  DynamoDbPolicy:
+    Description: Policy for managing DynamoDb tables
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub 'CodeStar-${ProjectId}-Execution${Stage}-DynamoPolicy'
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: "dynamodb:*"
+            Resource:
+              - Fn::GetAtt:
+                  - UsersTable
+                  - Arn
+              - Fn::GetAtt:
+                  - SessionsTable
+                  - Arn
   UsersTable:
     Description: DynamoDB Table for storing user records
     Type: AWS::DynamoDB::Table
