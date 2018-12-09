@@ -8,6 +8,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mitchellh/mapstructure"
+	LOGGER "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -57,7 +58,10 @@ func buildToken(email string, jwtSecret []byte, tokenExpiryMin int) (*string, *i
 //		- non-expired
 //		- contains the authenticate user email
 //	If valid, return the authenticated users email
-func validateToken(authHeader interface{}, jwtSecret []byte) (*string, error) {
+func validateToken(authHeader interface{}, jwtSecret []byte, logger *LOGGER.Logger) (*string, error) {
+	logger.WithFields(LOGGER.Fields{
+		"auth_header": authHeader,
+	}).Info("validateToken() - validate the incoming authorization header token")
 	// validate an Authorization header token is present in the request
 	if authHeader == nil {
 		return nil, errors.New("no valid Authorization token in request")
@@ -79,6 +83,11 @@ func validateToken(authHeader interface{}, jwtSecret []byte) (*string, error) {
 		return jwtSecret, nil
 	})
 	if err != nil {
+		logger.WithFields(LOGGER.Fields{
+			"auth_header":     authHeader,
+			"token":           t,
+			"jwt_parse_error": err.Error(),
+		}).Error("validateToken() - an error occurred while trying to parse the JWT")
 		return nil, err
 	}
 	// validate token and get claims
@@ -86,6 +95,11 @@ func validateToken(authHeader interface{}, jwtSecret []byte) (*string, error) {
 		var decodedToken map[string]string
 		err = mapstructure.Decode(claims, &decodedToken)
 		if err != nil {
+			logger.WithFields(LOGGER.Fields{
+				"token":           t,
+				"claims":          claims,
+				"jwt_parse_error": err.Error(),
+			}).Error("validateToken() - an error occurred while trying to get the JWT claims")
 			return nil, err
 		}
 		email := decodedToken["email"]

@@ -59,8 +59,9 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}
 	// log event
 	mgr.loggerImpl().WithFields(LOGGER.Fields{
-		"request_body":   request.Body,
-		"request_method": request.HTTPMethod,
+		"request_body":    request.Body,
+		"request_method":  request.HTTPMethod,
+		"request_headers": request.Headers,
 	}).Info("Handler() - File Upload Request Received")
 	// deserialize request body into params
 	var reqParams = new(params)

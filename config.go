@@ -134,7 +134,7 @@ func (c *conf) buildRootQuery() *graphql.Object {
 				Description: "Get the currently authenticated user by getting their info from the Auth header in the request",
 				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
 					// attempt to validate token
-					email, err := validateToken(p.Context.Value(authHeaderKey), c.jwtSecret)
+					email, err := validateToken(p.Context.Value(authHeaderKey), c.jwtSecret, c.loggerImpl())
 					if err != nil {
 						return nil, err
 					}
