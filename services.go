@@ -10,8 +10,8 @@ import (
 	LOGGER "github.com/sirupsen/logrus"
 )
 
-// findUserBydEmail query the users tables to find a user record by the id
-func findUserBydEmail(email, usersTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) (*user, error) {
+// findUserByEmail query the users tables to find a user record by the id
+func findUserByEmail(email, usersTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) (*user, error) {
 	logger.WithFields(LOGGER.Fields{
 		"email":            email,
 		"users_table_name": usersTableName,
@@ -82,7 +82,7 @@ func registerUser(email, pwd, name, role, usersTableName string, dbAPI dynamodbi
 //	* otherwise, validate that the submitted password matches the password on file
 //		* if the passwords do not match, return a non-successful authentication
 func authenticate(email, pwd, usersTableName, jwtSecret string, tokenExpiryMin int, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) auth {
-	user, err := findUserBydEmail(email, usersTableName, dbAPI, logger)
+	user, err := findUserByEmail(email, usersTableName, dbAPI, logger)
 	if err != nil {
 		return auth{
 			Success: false,

@@ -126,7 +126,7 @@ func (c *conf) buildRootQuery() *graphql.Object {
 				},
 				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
 					email := p.Args["email"].(string)
-					return findUserBydEmail(email, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
+					return findUserByEmail(email, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
 				},
 			},
 		},
@@ -167,10 +167,6 @@ func (c *conf) buildRootMutation() *graphql.Object {
 					// get input args
 					email := p.Args["email"].(string)
 					pwd := p.Args["pwd"].(string)
-					// log request
-					c.loggerImpl().WithFields(LOGGER.Fields{
-						"email": email,
-					}).Info("mutation.authenticate() - attempting to authenticate user")
 					// attempt to authenticate user
 					return authenticate(email, pwd, c.tableNames()[tablesMapUserKey], c.jwtSecret, c.tokenExpiryMin, c.dynamoImpl(), c.loggerImpl()), nil
 				},
