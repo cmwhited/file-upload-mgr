@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -95,7 +94,6 @@ func authenticate(email, pwd, usersTableName string, jwtSecret []byte, tokenExpi
 			Message: "Unable to find a record with the given email. Please Verify your email and try again",
 		}
 	}
-	fmt.Println("Found a user. verify pwd")
 	// verify password match
 	if !verifyPwd(user.Pwd, pwd) {
 		return auth{
@@ -111,5 +109,5 @@ func authenticate(email, pwd, usersTableName string, jwtSecret []byte, tokenExpi
 			Message: err.Error(),
 		}
 	}
-	return auth{Success: true, Token: *token, ExpiresAt: *expiry}
+	return auth{Success: true, Token: *token, ExpiresAt: *expiry, User: user}
 }

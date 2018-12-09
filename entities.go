@@ -59,6 +59,7 @@ type auth struct {
 	Message   string `json:"message,omitempty"`
 	Token     string `json:"token,omitempty"`
 	ExpiresAt int64  `json:"expiresAt,omitempty"`
+	User      *user  `json:"user,omitempty"`
 }
 
 var (
@@ -87,6 +88,7 @@ var (
 			"message":   &graphql.Field{Type: graphql.String},
 			"token":     &graphql.Field{Type: graphql.String},
 			"expiresAt": &graphql.Field{Type: graphql.Float},
+			"user":      &graphql.Field{Type: userType},
 		},
 	})
 )
