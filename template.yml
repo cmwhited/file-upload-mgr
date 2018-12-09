@@ -77,6 +77,7 @@ Resources:
                   - Fn::GetAtt:
                       - SessionsTable
                       - Arn
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/CodeStar_${ProjectId}_PermissionsBoundary'
   UsersTable:
     Description: DynamoDB Table for storing user records
     Type: AWS::DynamoDB::Table
