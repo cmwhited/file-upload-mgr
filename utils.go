@@ -6,6 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbiface"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mitchellh/mapstructure"
 	LOGGER "github.com/sirupsen/logrus"
@@ -106,4 +110,23 @@ func validateToken(authHeader interface{}, jwtSecret []byte, logger *LOGGER.Logg
 		return &email, nil
 	}
 	return nil, errors.New("invalid authorization token") // token is not valid, return error
+}
+
+// putItem - save an item into the given table in dynamodb
+func putItem(itemMap map[string]dynamodb.AttributeValue, tableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) error {
+	logger.WithFields(LOGGER.Fields{
+		"table": tableName,
+		"item":  itemMap,
+	}).Debug("putItem() - put the given item into the dynamodb table")
+	if _, err := dbAPI.PutItemRequest(&dynamodb.PutItemInput{
+		Item:      itemMap,
+		TableName: aws.String(tableName),
+	}).Send(); err != nil {
+		logger.WithFields(LOGGER.Fields{
+			"put_item_error": err.Error(),
+			"table":          tableName,
+		}).Error("putItem() - an error occurred calling the PutItemRequest to store the given item")
+		return err
+	}
+	return nil
 }

@@ -3,6 +3,8 @@ package main
 import (
 	"time"
 
+	"github.com/satori/go.uuid"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbattribute"
@@ -53,15 +55,17 @@ func registerUser(email, pwd, name, role, usersTableName string, dbAPI dynamodbi
 		return nil, err
 	}
 	// build user instance
+	now := time.Now()
+	active := true
 	user := &user{
 		Email: email,
 		Name:  name,
 		Role:  role,
 		Pwd:   *hashed,
 		Meta: baseMeta{
-			MetaCreatedAt: time.Now(),
-			MetaUpdatedAt: time.Now(),
-			MetaIsActive:  true,
+			MetaCreatedAt: &now,
+			MetaUpdatedAt: &now,
+			MetaIsActive:  &active,
 		},
 	}
 	userMap, err := dynamodbattribute.MarshalMap(user)
@@ -69,13 +73,7 @@ func registerUser(email, pwd, name, role, usersTableName string, dbAPI dynamodbi
 		return nil, err
 	}
 	// save the user record in dynamo
-	if _, err := dbAPI.PutItemRequest(&dynamodb.PutItemInput{
-		Item:      userMap,
-		TableName: aws.String(usersTableName),
-	}).Send(); err != nil {
-		logger.WithFields(LOGGER.Fields{
-			"put_item_error": err.Error(),
-		}).Error("registerUser() - an error occurred calling the PutItemRequest to store the user")
+	if err := putItem(userMap, usersTableName, dbAPI, logger); err != nil {
 		return nil, err
 	}
 	return user, nil
@@ -110,4 +108,94 @@ func authenticate(email, pwd, usersTableName string, jwtSecret []byte, tokenExpi
 		}
 	}
 	return auth{Success: true, Token: *token, ExpiresAt: *expiry, User: user}
+}
+
+// saveSession
+//	* convert the input session item into a dynamodb.AttributeValue map
+//	* save the item
+func saveSession(sess session, sessionTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) (*session, error) {
+	logger.WithFields(LOGGER.Fields{
+		"session":            sess,
+		"session_table_name": sessionTableName,
+	}).Info("saveSession() - save the incoming session instance into the dynamodb table")
+	// check for an id value on the session; if nil, generate a new id & set the meta data
+	now := time.Now()
+	active := true
+	if sess.ID == nil {
+		id, _ := uuid.NewV4()
+		idVal := id.String()
+		sess.ID = &idVal
+		sess.Meta = &baseMeta{
+			MetaCreatedAt: &now,
+			MetaUpdatedAt: &now,
+			MetaIsActive:  &active,
+		}
+	} else {
+		// id has a value, update the updated at in meta
+		sess.Meta.MetaUpdatedAt = &now
+		sess.Meta.MetaIsActive = &active
+	}
+	// convert to map
+	sessMap, err := dynamodbattribute.MarshalMap(sess)
+	if err != nil {
+		return nil, err
+	}
+	// save the session
+	if err := putItem(sessMap, sessionTableName, dbAPI, logger); err != nil {
+		return nil, err
+	}
+	return &sess, nil
+}
+
+// findSessionByID - find a session record in dynamodb by the session id and email associated to the session
+func findSessionByID(id, email, sessionTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) (*session, error) {
+	logger.WithFields(LOGGER.Fields{
+		"id":                 id,
+		"email":              email,
+		"session_table_name": sessionTableName,
+	}).Info("findSessionByID() - find the session record by the id primary key and email sort key")
+	output, err := dbAPI.GetItemRequest(&dynamodb.GetItemInput{
+		TableName: aws.String(sessionTableName),
+		Key:       map[string]dynamodb.AttributeValue{"id": {S: aws.String(id)}, "email": {S: aws.String(email)}},
+	}).Send()
+	if err != nil || len(output.Item) == 0 {
+		return nil, err
+	}
+	// unmarshal return into session
+	var sess = new(session)
+	if err = dynamodbattribute.UnmarshalMap(output.Item, &sess); err != nil {
+		return nil, err
+	}
+	return sess, nil
+}
+
+// findSessions - find all session records with the given email sort key
+func findSessions(email, sessionTableName string, dbAPI dynamodbiface.DynamoDBAPI, logger *LOGGER.Logger) ([]*session, error) {
+	logger.WithFields(LOGGER.Fields{
+		"email":              email,
+		"session_table_name": sessionTableName,
+	}).Info("findSessionByID() - find all session records with the email sort key")
+	output, err := dbAPI.QueryRequest(&dynamodb.QueryInput{
+		TableName: aws.String(sessionTableName),
+		KeyConditions: map[string]dynamodb.Condition{
+			"email": {
+				ComparisonOperator: dynamodb.ComparisonOperatorEq,
+				AttributeValueList: []dynamodb.AttributeValue{{S: aws.String(email)}},
+			},
+		},
+	}).Send()
+	if err != nil {
+		return nil, err
+	}
+	if *output.Count == 0 {
+		return nil, nil
+	}
+	var sessions = make([]*session, *output.Count)
+	for _, item := range output.Items {
+		var sess = new(session)
+		if err := dynamodbattribute.UnmarshalMap(item, &sess); err == nil {
+			sessions = append(sessions, sess)
+		}
+	}
+	return sessions, nil
 }

@@ -41,9 +41,9 @@ func (api *apiResponse) ToJSON() string {
 }
 
 type baseMeta struct {
-	MetaCreatedAt time.Time `json:"meta__created_at"`
-	MetaUpdatedAt time.Time `json:"meta__updated_at"`
-	MetaIsActive  bool      `json:"meta__is_active"`
+	MetaCreatedAt *time.Time `json:"meta__created_at"`
+	MetaUpdatedAt *time.Time `json:"meta__updated_at"`
+	MetaIsActive  *bool      `json:"meta__is_active"`
 }
 
 type user struct {
@@ -60,6 +60,17 @@ type auth struct {
 	Token     string `json:"token,omitempty"`
 	ExpiresAt int64  `json:"expiresAt,omitempty"`
 	User      *user  `json:"user,omitempty"`
+}
+
+type session struct {
+	ID          *string    `json:"id,omitempty"`
+	Email       string     `json:"email"`
+	Name        string     `json:"name"`
+	Description *string    `json:"description,omitempty"`
+	StartDate   time.Time  `json:"session_start_date"`
+	EndDate     *time.Time `json:"session_end_date,omitempty"`
+	Status      *string    `json:"status"`
+	Meta        *baseMeta  `json:"meta"`
 }
 
 var (
@@ -89,6 +100,31 @@ var (
 			"token":     &graphql.Field{Type: graphql.String},
 			"expiresAt": &graphql.Field{Type: graphql.Float},
 			"user":      &graphql.Field{Type: userType},
+		},
+	})
+	sessionType = graphql.NewObject(graphql.ObjectConfig{
+		Name: "Session",
+		Fields: graphql.Fields{
+			"id":                 &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
+			"email":              &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
+			"name":               &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
+			"description":        &graphql.Field{Type: graphql.String},
+			"session_start_date": &graphql.Field{Type: graphql.NewNonNull(graphql.DateTime)},
+			"session_end_date":   &graphql.Field{Type: graphql.DateTime},
+			"status":             &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
+			"meta":               &graphql.Field{Type: baseMetaType},
+		},
+	})
+	sessionInputType = graphql.NewInputObject(graphql.InputObjectConfig{
+		Name: "SessionInput",
+		Fields: graphql.InputObjectConfigFieldMap{
+			"id":                 &graphql.InputObjectFieldConfig{Type: graphql.String},
+			"email":              &graphql.InputObjectFieldConfig{Type: graphql.NewNonNull(graphql.String)},
+			"name":               &graphql.InputObjectFieldConfig{Type: graphql.NewNonNull(graphql.String)},
+			"description":        &graphql.InputObjectFieldConfig{Type: graphql.String},
+			"session_start_date": &graphql.InputObjectFieldConfig{Type: graphql.NewNonNull(graphql.DateTime)},
+			"session_end_date":   &graphql.InputObjectFieldConfig{Type: graphql.DateTime},
+			"status":             &graphql.InputObjectFieldConfig{Type: graphql.NewNonNull(graphql.String)},
 		},
 	})
 )

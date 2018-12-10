@@ -22,8 +22,11 @@ config - provides interface implementations to initiate and expose configuration
 package main
 
 import (
+	"errors"
 	"os"
 	"strconv"
+
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
@@ -36,11 +39,13 @@ import (
 )
 
 const (
-	dataKey           = "data"
-	jwtSecretKey      = "JWT_SECRET"
-	tokenExpiryMinKey = "TOKEN_EXPIRY_MIN"
-	tablesMapUserKey  = "USERS"
-	usersTableNameKey = "USERS_TABLE_NAME"
+	dataKey              = "data"
+	jwtSecretKey         = "JWT_SECRET"
+	tokenExpiryMinKey    = "TOKEN_EXPIRY_MIN"
+	tablesMapUserKey     = "USERS"
+	usersTableNameKey    = "USERS_TABLE_NAME"
+	tablesMapSessionKey  = "SESSIONS"
+	sessionsTableNameKey = "SESSIONS_TABLE_NAME"
 )
 
 type config interface {
@@ -141,6 +146,32 @@ func (c *conf) buildRootQuery() *graphql.Object {
 					return findUserByEmail(*email, c.tableNames()[tablesMapUserKey], c.dynamoImpl(), c.loggerImpl())
 				},
 			},
+			"getSession": &graphql.Field{
+				Type:        sessionType,
+				Description: "Get the session by the id and email keys",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+				},
+				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
+					id := p.Args["id"].(string)
+					email, err := validateToken(p.Context.Value(authHeaderKey), c.jwtSecret, c.loggerImpl())
+					if err != nil {
+						return nil, err
+					}
+					return findSessionByID(id, *email, c.tableNames()[tablesMapSessionKey], c.dynamoImpl(), c.loggerImpl())
+				},
+			},
+			"getSessions": &graphql.Field{
+				Type:        graphql.NewList(sessionType),
+				Description: "Get all sessions associated with the given email",
+				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
+					email, err := validateToken(p.Context.Value(authHeaderKey), c.jwtSecret, c.loggerImpl())
+					if err != nil {
+						return nil, err
+					}
+					return findSessions(*email, c.tableNames()[tablesMapSessionKey], c.dynamoImpl(), c.loggerImpl())
+				},
+			},
 		},
 	})
 }
@@ -183,6 +214,27 @@ func (c *conf) buildRootMutation() *graphql.Object {
 					return authenticate(email, pwd, c.tableNames()[tablesMapUserKey], c.jwtSecret, c.tokenExpiryMin, c.dynamoImpl(), c.loggerImpl()), nil
 				},
 			},
+			"saveSession": &graphql.Field{
+				Type:        sessionType,
+				Description: "Save a session instance",
+				Args: graphql.FieldConfigArgument{
+					"sess": &graphql.ArgumentConfig{Type: graphql.NewNonNull(sessionInputType)},
+				},
+				Resolve: func(p graphql.ResolveParams) (i interface{}, e error) {
+					sess := p.Args["sess"]
+					sessMap, ok := sess.(map[string]interface{}) // convert the input type to a User
+					if !ok {
+						e = errors.New("unable to convert input object to session record")
+						return nil, e
+					}
+					var s = new(session)
+					e = mapstructure.Decode(sessMap, &s) // decode map into session instance
+					if e != nil {
+						return nil, e
+					}
+					return saveSession(*s, c.tableNames()[tablesMapSessionKey], c.dynamoImpl(), c.loggerImpl())
+				},
+			},
 		},
 	})
 }
@@ -215,8 +267,10 @@ func (c *conf) tableNames() map[string]string {
 func (c *conf) init() (config, error) {
 	// load table names from env variables
 	usersTableName := os.Getenv(usersTableNameKey)
+	sessionsTableName := os.Getenv(sessionsTableNameKey)
 	c.tableName = map[string]string{
-		tablesMapUserKey: usersTableName,
+		tablesMapUserKey:    usersTableName,
+		tablesMapSessionKey: sessionsTableName,
 	}
 	jwtSecret := os.Getenv(jwtSecretKey)           // get the jwt secret key from the env
 	c.jwtSecret = []byte(jwtSecret)                // set as byte array; required by signer
