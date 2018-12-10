@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/expression"
 	LOGGER "github.com/sirupsen/logrus"
 )
 
@@ -175,14 +176,18 @@ func findSessions(email, sessionTableName string, dbAPI dynamodbiface.DynamoDBAP
 		"email":              email,
 		"session_table_name": sessionTableName,
 	}).Info("findSessionByID() - find all session records with the email sort key")
+	keyCond := expression.Key("email").Equal(expression.Value(email))
+	expr, err := expression.NewBuilder().
+		WithKeyCondition(keyCond).
+		Build()
+	if err != nil {
+		return nil, err
+	}
 	output, err := dbAPI.QueryRequest(&dynamodb.QueryInput{
-		TableName: aws.String(sessionTableName),
-		KeyConditions: map[string]dynamodb.Condition{
-			"email": {
-				ComparisonOperator: dynamodb.ComparisonOperatorEq,
-				AttributeValueList: []dynamodb.AttributeValue{{S: aws.String(email)}},
-			},
-		},
+		TableName:                 aws.String(sessionTableName),
+		KeyConditionExpression:    expr.KeyCondition(),
+		ExpressionAttributeValues: expr.Values(),
+		ExpressionAttributeNames:  expr.Names(),
 	}).Send()
 	if err != nil {
 		return nil, err
